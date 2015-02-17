@@ -180,6 +180,8 @@ public class Buzzr extends Frame
     ArrayList<String> undoStack, redoStack;
 
     CircuitCanvas cv;
+    
+    SetupReader setupReader;
 
     String startCircuit = null;
     String startLabel = null;
@@ -220,6 +222,9 @@ public class Buzzr extends Frame
             ohmString = "\u03a9";
             useBufferedImage = true;
         }
+        
+        setupReader = new SetupReader();
+        
         dumpTypes = new Class[300];
         shortcuts = new Class[127];
         // these characters are reserved
@@ -454,7 +459,7 @@ public class Buzzr extends Frame
         main.add(elmMenu);
         scopeMenu = buildScopeMenu(false);
         transScopeMenu = buildScopeMenu(true);
-        getSetupList(circuitsMenu, false);
+        setupReader.getSetupList(this, circuitsMenu, false);
         if (true) {
             setMenuBar(mb);
         }
@@ -2056,73 +2061,9 @@ public class Buzzr extends Frame
         }
     }
 
+    @Deprecated
     void getSetupList(Menu menu, boolean retry) {
-        Menu stack[] = new Menu[6];
-        int stackptr = 0;
-        stack[stackptr++] = menu;
-        try {
-            // hausen: if setuplist.txt does not exist in the same
-            // directory, try reading from the jar file
-            ByteArrayOutputStream ba;
-            try {
-                URL url = new URL(getCodeBase() + "setuplist.txt");
-                ba = readUrlData(url);
-            } catch (Exception e) {
-                try {
-                    URL url = getClass().getClassLoader().getResource("setuplist.txt");
-                    ba = readUrlData(url);
-                } catch (Exception f) {
-                    System.out.println("Couldn't read the setup list");
-                    return;
-                }
-            }
-            // /hausen
-            byte b[] = ba.toByteArray();
-            int len = ba.size();
-            int p;
-            if (len == 0 || b[0] != '#') {
-                // got a redirect, try again
-                getSetupList(menu, true);
-                return;
-            }
-            for (p = 0; p < len;) {
-                int l;
-                for (l = 0; l != len - p; l++) {
-                    if (b[l + p] == '\n') {
-                        l++;
-                        break;
-                    }
-                }
-                String line = new String(b, p, l - 1);
-                if (line.charAt(0) == '#') {
-                } else if (line.charAt(0) == '+') {
-                    Menu n = new Menu(line.substring(1));
-                    menu.add(n);
-                    menu = stack[stackptr++] = n;
-                } else if (line.charAt(0) == '-') {
-                    menu = stack[--stackptr - 1];
-                } else {
-                    int i = line.indexOf(' ');
-                    if (i > 0) {
-                        String title = line.substring(i + 1);
-                        boolean first = false;
-                        if (line.charAt(0) == '>') {
-                            first = true;
-                        }
-                        String file = line.substring(first ? 1 : 0, i);
-                        menu.add(getMenuItem(title, "setup " + file));
-                        if (first && startCircuit == null) {
-                            startCircuit = file;
-                            startLabel = title;
-                        }
-                    }
-                }
-                p += l;
-            }
-        } catch (Exception e) {
-            System.out.println("Error while reading the setuplist!");
-            e.printStackTrace();
-        }
+        setupReader.getSetupList(this, menu, retry);
     }
 
     void readSetup(String text) {
@@ -2134,24 +2075,9 @@ public class Buzzr extends Frame
         titleLabel.setText("untitled");
     }
 
+    @Deprecated
     void readSetupFile(String str, String title) {
-        t = 0;
-        System.out.println(str);
-        try {
-            URL url = new URL(getCodeBase() + "circuits/" + str);
-            ByteArrayOutputStream ba = readUrlData(url);
-            readSetup(ba.toByteArray(), ba.size(), false);
-        } catch (Exception e1) {
-            try {
-                URL url = getClass().getClassLoader().getResource("circuits/" + str);
-                ByteArrayOutputStream ba = readUrlData(url);
-                readSetup(ba.toByteArray(), ba.size(), false);
-            } catch (Exception e) {
-                e.printStackTrace();
-                stop("Unable to read " + str + "!", null);
-            }
-        }
-        titleLabel.setText(title);
+        setupReader.readSetupFile(this, str, title);
     }
 
     void readSetup(byte b[], int len, boolean retain) {
